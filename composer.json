@@ -1,0 +1,25 @@
+{
+    "name": "francoortiz/verdulanueva",
+    "version": "1.0.0",
+    "description": "Sistema de verdulería",
+    "type": "project",
+    "require": {
+        "php": ">=8.2",
+        "phpoffice/phpspreadsheet": "^2.0",
+        "mike42/escpos-php": "^2.2"
+    },
+    "require-dev": {
+        "launchdarkly/api-client-php": "^17.0"
+    },
+    "authors": [
+        {
+            "name": "Franco Ortiz",
+            "email": "franco.ortiz@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "": "src/"
+        }
+    }
+}
