@@ -11661,3 +11661,40 @@
 [2025-10-10 19:28:32] [::1] Excepción no capturada: Call to undefined method ImpresoraTermica::imprimirPrueba() en C:\xampp\htdocs\verdulanueva\setup_afip.php línea 174
 [2025-10-10 19:35:53] [::1] Excepción no capturada: Call to undefined method ImpresoraTermica::imprimirPrueba() en C:\xampp\htdocs\verdulanueva\setup_afip.php línea 174
 [2025-10-10 19:36:23] [::1] Excepción no capturada: Call to undefined method ImpresoraTermica::imprimirPrueba() en C:\xampp\htdocs\verdulanueva\setup_afip.php línea 174
+[2025-10-16 14:54:23] [::1] Error PHP [2]: SoapClient::__construct(): php_network_getaddresses: getaddrinfo for wsaahomo.afip.gov.ar failed: Host desconocido.  en C:\xampp\htdocs\verdulanueva\AFIPFacturacion.php línea 61
+[2025-10-16 14:54:23] [::1] Error PHP [2]: SoapClient::__construct(https://wsaahomo.afip.gov.ar/ws/services/LoginCms?wsdl): Failed to open stream: php_network_getaddresses: getaddrinfo for wsaahomo.afip.gov.ar failed: Host desconocido.  en C:\xampp\htdocs\verdulanueva\AFIPFacturacion.php línea 61
+[2025-10-16 14:54:23] [::1] Error PHP [2]: SoapClient::__construct(): I/O warning : failed to load external entity &quot;https://wsaahomo.afip.gov.ar/ws/services/LoginCms?wsdl&quot; en C:\xampp\htdocs\verdulanueva\AFIPFacturacion.php línea 61
+[2025-10-16 15:00:17] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-16 15:00:17] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-16 15:00:17] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-16 15:00:17] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-16 15:00:17] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-16 15:00:17] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-16 15:00:17] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-16 15:00:17] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-16 15:00:17] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-16 15:00:17] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-16 15:00:17] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-18 21:48:26] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-18 21:48:26] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-18 21:48:26] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-18 21:48:26] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-18 21:48:26] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-18 21:48:26] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-18 21:48:26] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-18 21:48:26] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-18 21:48:26] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-18 21:48:26] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-18 21:48:26] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-20 16:38:00] [::1] Error PHP [2]: openssl_pkcs7_sign(): Error creating PKCS7 structure! en C:\xampp\htdocs\verdulanueva\setup_afip.php línea 146
+[2025-10-23 18:52:40] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-23 18:52:40] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-23 18:52:40] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-23 18:52:40] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-23 18:52:40] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-23 18:52:40] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-23 18:52:40] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-23 18:52:40] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-23 18:52:40] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-23 18:52:40] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733
+[2025-10-23 18:52:40] [::1] Error PHP [8192]: htmlspecialchars(): Passing null to parameter #1 ($string) of type string is deprecated en C:\xampp\htdocs\verdulanueva\info_ventas.php línea 733

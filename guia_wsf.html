@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habilitar wsfe en AFIP</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .alert {
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            border-left: 5px solid;
+        }
+        
+        .alert-error {
+            background: #fee;
+            border-color: #c33;
+            color: #811;
+        }
+        
+        .alert-warning {
+            background: #fffbec;
+            border-color: #f90;
+            color: #663d00;
+        }
+        
+        .alert-info {
+            background: #e3f2fd;
+            border-color: #2196f3;
+            color: #0d47a1;
+        }
+        
+        .alert-success {
+            background: #e8f5e9;
+            border-color: #4caf50;
+            color: #1b5e20;
+        }
+        
+        h2 {
+            color: #1e3c72;
+            margin: 30px 0 20px 0;
+            font-size: 1.8em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        h3 {
+            color: #2a5298;
+            margin: 20px 0 15px 0;
+            font-size: 1.3em;
+        }
+        
+        .steps {
+            counter-reset: step;
+        }
+        
+        .step {
+            background: #f8f9fa;
+            padding: 25px;
+            margin: 20px 0;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+            position: relative;
+            padding-left: 80px;
+        }
+        
+        .step::before {
+            counter-increment: step;
+            content: counter(step);
+            position: absolute;
+            left: 20px;
+            top: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .step h4 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        
+        .step p {
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 10px;
+        }
+        
+        .step ul {
+            margin: 15px 0;
+            padding-left: 20px;
+        }
+        
+        .step li {
+            margin: 8px 0;
+            line-height: 1.6;
+            color: #555;
+        }
+        
+        .screenshot {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+        }
+        
+        .important {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        
+        .important strong {
+            color: #856404;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            margin: 10px 10px 10px 0;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #868f96 0%, #596164 100%);
+        }
+        
+        code {
+            background: #f8f9fa;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #c33;
+            border: 1px solid #dee2e6;
+        }
+        
+        .checklist {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .checklist-item {
+            padding: 12px;
+            margin: 8px 0;
+            border-left: 3px solid #28a745;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .checklist-item::before {
+            content: "✓ ";
+            color: #28a745;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Habilitar Servicio wsfe en AFIP</h1>
+            <p>Guía paso a paso para solucionar el error de certificado</p>
+        </div>
+        
+        <div class="content">
+            <div class="alert alert-error">
+                <h3 style="margin-top:0;">❌ Error Actual</h3>
+                <p><strong>"Certificado no emitido por AC de confianza"</strong></p>
+                <p>Este error ocurre porque el certificado no está asociado al servicio <code>wsfe</code> en AFIP.</p>
+            </div>
+            
+            <h2>🎯 Solución</h2>
+            
+            <p style="font-size: 1.1em; line-height: 1.6; margin-bottom: 30px;">
+                Necesitás <strong>habilitar el servicio wsfe</strong> en el Administrador de Relaciones de AFIP 
+                y asociarlo con tu certificado digital. Seguí estos pasos:
+            </p>
+            
+            <div class="steps">
+                <div class="step">
+                    <h4>Ingresar a AFIP</h4>
+                    <p>Ingresá al sitio de AFIP con tu Clave Fiscal:</p>
+                    <a href="https://auth.afip.gob.ar" target="_blank" class="btn">Ir a AFIP</a>
+                    <div class="important">
+                        <strong>⚠️ Importante:</strong> Necesitás tener nivel de seguridad 3 o superior en tu Clave Fiscal
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <h4>Acceder al Administrador de Relaciones</h4>
+                    <p>Una vez dentro del sistema:</p>
+                    <ul>
+                        <li>Ir a: <strong>Sistema</strong> (menú superior)</li>
+                        <li>Seleccionar: <strong>Administrador de Relaciones de Clave Fiscal</strong></li>
+                    </ul>
+                    <div class="screenshot">
+                        📸 Captura: Menú Sistema → Administrador de Relaciones
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <h4>Buscar el servicio wsfe</h4>
+                    <p>En el Administrador de Relaciones:</p>
+                    <ul>
+                        <li>Buscar en la lista de servicios: <code>wsfe</code></li>
+                        <li>Verificar si ya está habilitado</li>
+                        <li>Si aparece en la lista pero está <strong>inactivo</strong>, continuar al siguiente paso</li>
+                        <li>Si NO aparece en la lista, ir directamente al paso 4</li>
+                    </ul>
+                </div>
+                
+                <div class="step">
+                    <h4>Agregar/Habilitar el servicio wsfe</h4>
+                    <p>Hacer clic en <strong>"Nueva Relación"</strong> o <strong>"Agregar Servicio"</strong></p>
+                    <ul>
+                        <li>En el buscador, escribir: <code>wsfe</code></li>
+                        <li>Seleccionar: <strong>wsfe - Web Service de Facturación Electrónica</strong></li>
+                        <li>Hacer clic en <strong>Agregar</strong></li>
+                    </ul>
+                    <div class="important">
+                        <strong>Nota:</strong> Puede que te pida adherir al servicio primero si es la primera vez
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <h4>Asociar el certificado digital</h4>
+                    <p>Una vez agregado el servicio wsfe:</p>
+                    <ul>
+                        <li>Hacer clic en <strong>"Certificados Digitales"</strong> o <strong>"Administrar Certificados"</strong></li>
+                        <li>Buscar tu certificado (debería aparecer el que subiste)</li>
+                        <li>Si no está, hacer clic en <strong>"Nuevo Certificado"</strong></li>
+                        <li>Subir el archivo CSR (Certificate Signing Request)</li>
+                    </ul>
+                </div>
+                
+                <div class="step">
+                    <h4>Generar/Subir CSR</h4>
+                    <p>Si necesitás generar un nuevo CSR:</p>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                        <strong>Comando para generar CSR:</strong>
+                        <pre style="background: #212529; color: #0f0; padding: 15px; border-radius: 5px; margin-top: 10px; overflow-x: auto;">cd C:\xampp\htdocs\verdulanueva\certificados
+C:\xampp\apache\bin\openssl.exe genrsa -out afip_nuevo.key 2048
+C:\xampp\apache\bin\openssl.exe req -new -key afip_nuevo.key -out afip_nuevo.csr -subj "/C=AR/O=MINI_SUPER_LA_NUEVA/CN=moreno_VERDU/serialNumber=CUIT 20355274684"</pre>
+                    </div>
+                    <p>Después subir <code>afip_nuevo.csr</code> a AFIP</p>
+                </div>
+                
+                <div class="step">
+                    <h4>Descargar certificado emitido</h4>
+                    <p>Una vez que AFIP procese el CSR (generalmente instantáneo):</p>
+                    <ul>
+                        <li>Descargar el certificado <code>.crt</code> generado por AFIP</li>
+                        <li>Guardarlo como <code>certificados/afip.crt</code></li>
+                        <li><strong>Importante:</strong> Usar la misma clave privada (<code>afip_nuevo.key</code>)</li>
+                    </ul>
+                </div>
+                
+                <div class="step">
+                    <h4>Verificar habilitación</h4>
+                    <p>Volver al Administrador de Relaciones y verificar que:</p>
+                    <div class="checklist">
+                        <div class="checklist-item">El servicio <code>wsfe</code> aparece en la lista</div>
+                        <div class="checklist-item">El estado es <strong>ACTIVO</strong></div>
+                        <div class="checklist-item">Hay un certificado digital asociado</div>
+                        <div class="checklist-item">El certificado está <strong>vigente</strong> (no vencido)</div>
+                    </div>
+                </div>
+                
+                <div class="step">
+                    <h4>Actualizar configuración del sistema</h4>
+                    <p>Si generaste un nuevo certificado:</p>
+                    <ul>
+                        <li>Actualizar las rutas en tu configuración</li>
+                        <li>Ejecutar <code>setup_afip.php</code> nuevamente</li>
+                        <li>Verificar con <code>test_afip_directo.php</code></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <h2>🔍 Verificación Rápida</h2>
+            
+            <div class="alert alert-info">
+                <h3 style="margin-top: 0;">Checklist de verificación</h3>
+                <p><strong>Antes de continuar, asegurate de:</strong></p>
+                <ul>
+                    <li>✓ Tener Clave Fiscal nivel 3 o superior</li>
+                    <li>✓ El CUIT <code>20355274684</code> es correcto</li>
+                    <li>✓ El servicio <code>wsfe</code> está en el Administrador de Relaciones</li>
+                    <li>✓ El servicio está en estado <strong>ACTIVO</strong></li>
+                    <li>✓ Hay un certificado digital asociado y vigente</li>
+                </ul>
+            </div>
+            
+            <h2>❓ Problemas comunes</h2>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">No puedo agregar el servicio wsfe</h3>
+                <p><strong>Causa:</strong> No tenés los permisos necesarios o no estás adherido al régimen de facturación electrónica.</p>
+                <p><strong>Solución:</strong> Contactar a AFIP o tu contador para habilitar facturación electrónica.</p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">El certificado no aparece después de subirlo</h3>
+                <p><strong>Causa:</strong> El CSR puede tener errores o el proceso está pendiente de aprobación.</p>
+                <p><strong>Solución:</strong> Esperar unos minutos y refrescar. Si persiste, generar un nuevo CSR.</p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">Sigue dando el mismo error después de habilitar</h3>
+                <p><strong>Causa:</strong> Los cambios en AFIP pueden tardar unos minutos en propagarse.</p>
+                <p><strong>Solución:</strong> Esperar 5-10 minutos y volver a probar.</p>
+            </div>
+            
+            <h2>📞 Soporte AFIP</h2>
+            
+            <div class="alert alert-warning">
+                <p><strong>Si necesitás ayuda de AFIP:</strong></p>
+                <ul>
+                    <li>📞 Call Center: 0810-999-2347</li>
+                    <li>🌐 Web: <a href="https://www.afip.gob.ar/sitio/externos/ayuda/default.asp" target="_blank">https://www.afip.gob.ar/sitio/externos/ayuda/</a></li>
+                    <li>💬 Consultas online desde tu cuenta de AFIP</li>
+                </ul>
+            </div>
+            
+            <div style="text-align: center; margin-top: 40px; padding-top: 30px; border-top: 2px solid #e9ecef;">
+                <a href="test_afip_directo.php" class="btn">🔄 Volver a probar conexión</a>
+                <a href="setup_afip.php" class="btn btn-secondary">⚙️ Ir a Setup AFIP</a>
+            </div>
+            
+            <div class="alert alert-success" style="margin-top: 30px;">
+                <h3 style="margin-top: 0;">✅ Después de habilitar el servicio</h3>
+                <p>Una vez que hayas completado todos los pasos:</p>
+                <ol>
+                    <li>Esperar 5 minutos para que los cambios se apliquen</li>
+                    <li>Ejecutar <code>test_afip_directo.php</code></li>
+                    <li>Si todo está OK, ejecutar <code>setup_afip.php</code></li>
+                    <li>¡Listo para facturar!</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

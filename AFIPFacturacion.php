@@ -1,7 +1,4 @@
 <?php
-/**
- * AFIPFacturacion.php - VERSIÓN CORREGIDA CON crearSoapClient EN TODOS LADOS
- */
 
 require_once 'CalculadoraIVA.php';
 
@@ -22,7 +19,7 @@ class AFIPFacturacion {
     ];
     
     private const URLS_WSFEv1 = [
-        1 => 'https://servicios1.afip.gov.ar/wsfev1/service.asmx',
+        1 => 'https://servicios1.afip.gov.ar/wsfev1/service.asmx', 
         2 => 'https://wswhomo.afip.gov.ar/wsfev1/service.asmx'
     ];
     
@@ -40,34 +37,44 @@ class AFIPFacturacion {
         $this->cargarCredenciales();
     }
 
-    /**
-     * Crear cliente SOAP con configuración correcta
-     */
     private function crearSoapClient($url) {
         if (!strpos($url, '?wsdl')) {
             $url .= '?wsdl';
         }
         
-        return new SoapClient($url, [
-            'verify_peer' => false,
-            'verify_host' => false,
-            'connection_timeout' => 10,
-            'stream_context' => stream_context_create([
-                'ssl' => [
-                    'verify_peer' => false,
-                    'verify_host' => false,
-                    'allow_self_signed' => true
-                ]
-            ]),
-            'exceptions' => true,
-            'trace' => true,
-            'cache_wsdl' => WSDL_CACHE_NONE
+        $contextoSSL = stream_context_create([
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true,
+                'capture_peer_cert' => false,
+                'capture_peer_chain' => false,
+                'SNI_enabled' => true,
+                'disable_compression' => true
+            ],
+            'http' => [
+                'timeout' => 30,
+                'user_agent' => 'PHP-SOAP/AFIP'
+            ]
         ]);
+        
+        try {
+            return new SoapClient($url, [
+                'stream_context' => $contextoSSL,
+                'connection_timeout' => 30,
+                'exceptions' => true,
+                'trace' => true,
+                'cache_wsdl' => WSDL_CACHE_NONE,
+                'soap_version' => SOAP_1_2,
+                'keep_alive' => false,
+                'compression' => SOAP_COMPRESSION_ACCEPT | SOAP_COMPRESSION_GZIP
+            ]);
+        } catch (Exception $e) {
+            error_log("Error creando cliente SOAP para {$url}: " . $e->getMessage());
+            throw new Exception("Error de conectividad: No se puede conectar a " . $url);
+        }
     }
     
-    /**
-     * Obtener credenciales de acceso desde WSAA
-     */
     public function obtenerCredenciales() {
         try {
             error_log("=== OBTENER CREDENCIALES ===");
@@ -78,9 +85,9 @@ class AFIPFacturacion {
             
             error_log("2. Firmando TRA...");
             $cms = $this->firmarTRA($tra);
-            error_log("✓ TRA firmado");
+            error_log("✓ TRA firmado (" . strlen($cms) . " bytes)");
             
-            error_log("3. Conectando a WSAA...");
+            error_log("3. Conectando a WSAA: " . self::URLS_WSAA[$this->ambiente]);
             $soap = $this->crearSoapClient(self::URLS_WSAA[$this->ambiente]);
             error_log("✓ Cliente SOAP creado");
             
@@ -88,16 +95,31 @@ class AFIPFacturacion {
             $resultado = $soap->loginCms(['in0' => $cms]);
             error_log("✓ Respuesta recibida");
             
+            // NUEVO: Validar respuesta antes de parsear
+            if (!isset($resultado->loginCmsReturn)) {
+                throw new Exception('Respuesta inválida de WSAA');
+            }
+            
             error_log("5. Parseando XML...");
             $xml = simplexml_load_string($resultado->loginCmsReturn);
             
             if (!$xml) {
-                throw new Exception('Error parseando respuesta de WSAA');
+                throw new Exception('Error parseando respuesta de WSAA: ' . libxml_get_last_error()->message);
+            }
+            
+            // NUEVO: Verificar si hay errores en la respuesta
+            if (isset($xml->error)) {
+                throw new Exception("Error WSAA: {$xml->error->message} (Código: {$xml->error->code})");
             }
             
             $this->token = (string)$xml->credentials->token;
             $this->sign = (string)$xml->credentials->sign;
             $this->tokenExpira = strtotime((string)$xml->header->expirationTime);
+            
+            // Validar que se obtuvieron los datos
+            if (empty($this->token) || empty($this->sign)) {
+                throw new Exception('Token o Sign vacíos en la respuesta de WSAA');
+            }
             
             $this->guardarCredenciales();
             error_log("✓ Credenciales guardadas. Expira: " . date('Y-m-d H:i:s', $this->tokenExpira));
@@ -115,12 +137,128 @@ class AFIPFacturacion {
         }
     }
     
+    private function encontrarOpenSSL() {
+        $paths = [
+            'openssl',
+            'C:/xampp/apache/bin/openssl.exe',
+            'C:/Program Files/OpenSSL-Win64/bin/openssl.exe',
+            'C:/Program Files (x86)/OpenSSL-Win32/bin/openssl.exe',
+            '/usr/bin/openssl',
+            '/usr/local/bin/openssl'
+        ];
+        
+        foreach ($paths as $path) {
+            $testCmd = is_file($path) ? "\"{$path}\" version 2>&1" : "{$path} version 2>&1";
+            @exec($testCmd, $output, $return);
+            
+            if ($return === 0) {
+                error_log("OpenSSL encontrado: {$path}");
+                return $path;
+            }
+        }
+        
+        return null;
+    }
+    
     /**
-     * Crear comprobante en AFIP
+     * CORREGIDO: Firma TRA con el formato exacto que AFIP requiere
      */
+    private function firmarTRA($tra) {
+        try {
+            // Verificar archivos
+            if (!file_exists($this->certificado)) {
+                throw new Exception("Certificado no encontrado: {$this->certificado}");
+            }
+            if (!file_exists($this->clavePrivada)) {
+                throw new Exception("Clave privada no encontrada: {$this->clavePrivada}");
+            }
+            
+            // Buscar OpenSSL
+            $opensslCmd = $this->encontrarOpenSSL();
+            
+            if (!$opensslCmd) {
+                throw new Exception("OpenSSL no encontrado. Instalá OpenSSL o usá XAMPP que lo incluye.");
+            }
+            
+            // Archivos temporales
+            $traFile = tempnam(sys_get_temp_dir(), 'tra_');
+            $cmsFile = tempnam(sys_get_temp_dir(), 'cms_');
+            
+            file_put_contents($traFile, $tra);
+            
+            // Usar rutas absolutas
+            $certPath = realpath($this->certificado);
+            $keyPath = realpath($this->clavePrivada);
+            
+            // CORREGIDO: Comando con -nochain para evitar certificados intermedios
+            $command = sprintf(
+                '"%s" smime -sign -in "%s" -out "%s" -signer "%s" -inkey "%s" -outform DER -nodetach -nochain 2>&1',
+                $opensslCmd,
+                $traFile,
+                $cmsFile,
+                $certPath,
+                $keyPath
+            );
+            
+            error_log("Ejecutando: " . $command);
+            
+            exec($command, $output, $return);
+            
+            if ($return !== 0) {
+                $error = implode("\n", $output);
+                error_log("Error OpenSSL: " . $error);
+                throw new Exception("Error ejecutando OpenSSL: " . $error);
+            }
+            
+            if (!file_exists($cmsFile) || filesize($cmsFile) == 0) {
+                throw new Exception("Archivo CMS no fue generado");
+            }
+            
+            // Leer el archivo DER y convertir a base64
+            $cmsBinary = file_get_contents($cmsFile);
+            $cmsBase64 = base64_encode($cmsBinary);
+            
+            error_log("✓ CMS generado correctamente");
+            error_log("  - Binario: " . strlen($cmsBinary) . " bytes");
+            error_log("  - Base64: " . strlen($cmsBase64) . " caracteres");
+            
+            // Limpiar archivos temporales
+            @unlink($traFile);
+            @unlink($cmsFile);
+            
+            return $cmsBase64;
+            
+        } catch (Exception $e) {
+            error_log("✗ Error en firmarTRA: " . $e->getMessage());
+            
+            // Limpiar
+            if (isset($traFile) && file_exists($traFile)) @unlink($traFile);
+            if (isset($cmsFile) && file_exists($cmsFile)) @unlink($cmsFile);
+            
+            throw $e;
+        }
+    }
+    
+    private function crearTRA() {
+        $ahora = date('c');
+        $expira = date('c', strtotime('+24 hours'));
+        $uniqueId = time();
+        
+        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<loginTicketRequest version=\"1.0\">
+    <header>
+        <uniqueId>{$uniqueId}</uniqueId>
+        <generationTime>{$ahora}</generationTime>
+        <expirationTime>{$expira}</expirationTime>
+    </header>
+    <service>wsfe</service>
+</loginTicketRequest>";
+    }
+    
     public function crearComprobante($datosVenta, $tipoComprobante = 11) {
         try {
             if (!$this->credencialesValidas()) {
+                error_log("Credenciales vencidas, renovando...");
                 $this->obtenerCredenciales();
             }
             
@@ -155,7 +293,6 @@ class AFIPFacturacion {
                 $comprobante['DocNro'] = 0;
             }
             
-            // USAR crearSoapClient
             $soap = $this->crearSoapClient(self::URLS_WSFEv1[$this->ambiente]);
             
             $request = [
@@ -176,6 +313,7 @@ class AFIPFacturacion {
                 ]
             ];
             
+            error_log("Solicitando CAE para venta {$datosVenta['venta_id']}...");
             $resultado = $soap->FECAESolicitar($request);
             
             if ($resultado->FECAESolicitarResult->Errors) {
@@ -224,12 +362,8 @@ class AFIPFacturacion {
         }
     }
     
-    /**
-     * Obtener próximo número de comprobante
-     */
     private function obtenerProximoNumero($tipoComprobante) {
         try {
-            // USAR crearSoapClient
             $soap = $this->crearSoapClient(self::URLS_WSFEv1[$this->ambiente]);
             
             $request = [
@@ -250,66 +384,6 @@ class AFIPFacturacion {
         }
     }
     
-    /**
-     * Crear Ticket Request (TRA)
-     */
-    private function crearTRA() {
-        $ahora = date('c');
-        $expira = date('c', strtotime('+24 hours'));
-        $uniqueId = time();
-        
-        return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
-<loginTicketRequest version=\"1.0\">
-    <header>
-        <uniqueId>{$uniqueId}</uniqueId>
-        <generationTime>{$ahora}</generationTime>
-        <expirationTime>{$expira}</expirationTime>
-    </header>
-    <service>wsfe</service>
-</loginTicketRequest>";
-    }
-    
-    /**
-     * Firmar TRA con OpenSSL
-     */
-    private function firmarTRA($tra) {
-        try {
-            $traFile = tempnam(sys_get_temp_dir(), 'tra_');
-            file_put_contents($traFile, $tra);
-            
-            $cmsFile = tempnam(sys_get_temp_dir(), 'cms_');
-            
-            $traFile = str_replace('\\', '/', $traFile);
-            $cmsFile = str_replace('\\', '/', $cmsFile);
-            $cert = str_replace('\\', '/', realpath($this->certificado));
-            $key = str_replace('\\', '/', realpath($this->clavePrivada));
-            
-            $openssl = 'C:\\Program Files (x86)\\OpenSSL-Win32\\bin\\openssl.exe';
-        $command = "\"{$openssl}\" smime -sign -in \"{$traFile}\" -out \"{$cmsFile}\" -signer \"{$cert}\" -inkey \"{$key}\" -outform DER -nodetach -nochain 2>&1";
-            
-            exec($command, $output, $returnVar);
-            
-            if ($returnVar !== 0) {
-                throw new Exception("OpenSSL error: " . implode(" ", $output));
-            }
-            
-            if (!file_exists($cmsFile) || filesize($cmsFile) == 0) {
-                throw new Exception("CMS file not created");
-            }
-            
-            $cms = base64_encode(file_get_contents($cmsFile));
-            
-            @unlink($traFile);
-            @unlink($cmsFile);
-            
-            return $cms;
-            
-        } catch (Exception $e) {
-            error_log("Error en firmarTRA: " . $e->getMessage());
-            throw $e;
-        }
-    }
-    
     private function credencialesValidas() {
         return !empty($this->token) && !empty($this->sign) && $this->tokenExpira > time();
     }
@@ -322,6 +396,7 @@ class AFIPFacturacion {
                 $this->token = $datos['token'];
                 $this->sign = $datos['sign'];
                 $this->tokenExpira = $datos['expira'];
+                error_log("Credenciales cargadas desde caché");
             }
         }
     }
@@ -404,11 +479,11 @@ class AFIPFacturacion {
     private function determinarTipoDocumento($documento) {
         $documento = preg_replace('/[^0-9]/', '', $documento);
         if (strlen($documento) == 11) {
-            return 80;
+            return 80; // CUIT
         } elseif (strlen($documento) == 8) {
-            return 96;
+            return 96; // DNI
         } else {
-            return 99;
+            return 99; // Consumidor Final
         }
     }
     
@@ -446,32 +521,17 @@ class AFIPFacturacion {
         }
     }
     
-    public static function getConfiguracionTesting() {
-        return [
-            'cuit' => '20123456789',
-            'certificado' => 'certificados/testing.crt',
-            'clave_privada' => 'certificados/testing.key',
-            'punto_venta' => 1,
-            'ambiente' => 2
-        ];
-    }
-    
-    public static function getConfiguracionProduccion() {
-        return [
-            'cuit' => '20123456789',
-            'certificado' => 'certificados/produccion.crt',
-            'clave_privada' => 'certificados/produccion.key',
-            'punto_venta' => 1,
-            'ambiente' => 1
-        ];
-    }
-    
     public function validarConfiguracion() {
         $errores = [];
         
         if (empty($this->cuit)) $errores[] = 'CUIT no configurado';
         if (!file_exists($this->certificado)) $errores[] = 'Certificado no encontrado';
         if (!file_exists($this->clavePrivada)) $errores[] = 'Clave privada no encontrada';
+        
+        // Verificar OpenSSL
+        if (!$this->encontrarOpenSSL()) {
+            $errores[] = 'OpenSSL no encontrado en el sistema';
+        }
         
         return [
             'valido' => empty($errores),
@@ -532,21 +592,6 @@ class ConfiguracionAFIP {
             $config->set('afip_' . $clave, $valor, $tipoValor);
         }
         return true;
-    }
-    
-    public static function configuracionInicial() {
-        return [
-            'habilitado' => false,
-            'cuit' => '',
-            'certificado' => 'certificados/afip.crt',
-            'clave_privada' => 'certificados/afip.key',
-            'punto_venta' => 1,
-            'ambiente' => 2,
-            'tipo_comprobante_default' => 11,
-            'generar_para_debito' => true,
-            'generar_para_credito' => true,
-            'generar_para_transferencia' => true
-        ];
     }
 }
 ?>

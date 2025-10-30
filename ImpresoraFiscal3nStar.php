@@ -114,165 +114,295 @@ class ImpresoraTermica {
      * Genera el contenido del ticket en formato ESC/POS
      */
     private function generarTicket($venta, $items) {
-        $config = ConfigManager::getInstance();
-        $ticket = '';
-        
-        // 1. INICIALIZAR
-        $ticket .= self::CMD_INIT;
-        
-        // 2. ENCABEZADO - Logo y nombre del negocio
-        $ticket .= self::ALIGN_CENTER;
-        $ticket .= self::SIZE_DOUBLE;
-        $ticket .= self::BOLD_ON;
-        $ticket .= $this->centrarTexto($config->get('nombre_negocio', 'MINI SUPERMERCADO'));
+    $config = ConfigManager::getInstance();
+    $ticket = '';
+    
+    // 1. INICIALIZAR
+    $ticket .= self::CMD_INIT;
+    
+    // 2. ENCABEZADO - Logo y nombre del negocio
+    $ticket .= self::ALIGN_CENTER;
+    $ticket .= self::SIZE_DOUBLE;
+    $ticket .= self::BOLD_ON;
+    $ticket .= $this->centrarTexto($config->get('nombre_negocio', 'MINI SUPERMERCADO'));
+    $ticket .= self::LF;
+    $ticket .= self::BOLD_OFF;
+    $ticket .= self::SIZE_NORMAL;
+    
+    // Datos del negocio
+    $ticket .= $this->centrarTexto($config->get('direccion_negocio', 'Av. Amadeo Sabattini 2607'));
+    $ticket .= self::LF;
+    $ticket .= $this->centrarTexto('CUIT: ' . $config->get('cuit_negocio', '20-35527468-4'));
+    $ticket .= self::LF;
+    $ticket .= $this->centrarTexto('IVA Responsable Inscripto');
+    $ticket .= self::LF;
+    $ticket .= self::LF;
+    
+    // Separador
+    $ticket .= $this->linea('=');
+    
+    // 3. TIPO DE COMPROBANTE
+    $ticket .= self::ALIGN_CENTER;
+    $ticket .= self::SIZE_DOUBLE_HEIGHT;
+    $ticket .= self::BOLD_ON;
+    
+    // Determinar si requiere ticket fiscal
+    $requiereFiscal = in_array($venta['tipo_pago'], ['tarjeta-credito', 'tarjeta-debito', 'qr']);
+    
+    if ($requiereFiscal) {
+        $ticket .= $this->centrarTexto('TICKET FISCAL');
         $ticket .= self::LF;
-        $ticket .= self::BOLD_OFF;
         $ticket .= self::SIZE_NORMAL;
-        
-        // Datos del negocio
-        $ticket .= $this->centrarTexto($config->get('direccion_negocio', 'Av. Amadeo Sabattini 2607'));
+        $ticket .= $this->centrarTexto('Tipo: C - Consumidor Final');
+    } else {
+        $ticket .= $this->centrarTexto('TICKET NO FISCAL');
         $ticket .= self::LF;
-        $ticket .= $this->centrarTexto('CUIT: ' . $config->get('cuit_negocio', '20-35527468-4'));
-        $ticket .= self::LF;
-        $ticket .= $this->centrarTexto('IVA Responsable Inscripto');
-        $ticket .= self::LF;
-        $ticket .= self::LF;
+        $ticket .= self::SIZE_NORMAL;
+        $ticket .= $this->centrarTexto('Comprobante No Válido como Factura');
+    }
+    
+    $ticket .= self::BOLD_OFF;
+    $ticket .= self::LF;
+    $ticket .= self::LF;
+    
+    // 4. FECHA Y NÚMERO
+    $ticket .= self::ALIGN_LEFT;
+    $ticket .= 'Fecha: ' . date('d/m/Y H:i:s', strtotime($venta['fecha_hora']));
+    $ticket .= self::LF;
+    $ticket .= 'Venta N°: ' . str_pad($venta['id'], 8, '0', STR_PAD_LEFT);
+    $ticket .= self::LF;
+    $ticket .= self::LF;
+    
+    // Separador
+    $ticket .= $this->linea('-');
+    
+    // 5. ITEMS
+    $ticket .= self::BOLD_ON;
+    $ticket .= $this->formatearLinea('DESCRIPCIÓN', 'PRECIO', 32, 16);
+    $ticket .= self::BOLD_OFF;
+    $ticket .= $this->linea('-');
+    
+    foreach ($items as $item) {
+        // Nombre del departamento
+        $descripcion = substr($item['departamento'] ?? 'PRODUCTO', 0, 30);
+        $precio = '$' . number_format($item['precio'], 2, '.', ',');
         
-        // Separador
-        $ticket .= $this->linea('=');
+        $ticket .= $this->formatearLinea($descripcion, $precio, 32, 16);
         
-        // 3. TIPO DE COMPROBANTE
-        $ticket .= self::ALIGN_CENTER;
-        $ticket .= self::SIZE_DOUBLE_HEIGHT;
-        $ticket .= self::BOLD_ON;
-        
-        // Determinar si requiere ticket fiscal
-        $requiereFiscal = in_array($venta['tipo_pago'], ['tarjeta-credito', 'tarjeta-debito', 'qr']);
-        
-        if ($requiereFiscal) {
-            $ticket .= $this->centrarTexto('TICKET FISCAL');
-            $ticket .= self::LF;
-            $ticket .= self::SIZE_NORMAL;
-            $ticket .= $this->centrarTexto('Tipo: C - Consumidor Final');
-        } else {
-            $ticket .= $this->centrarTexto('TICKET NO FISCAL');
-            $ticket .= self::LF;
-            $ticket .= self::SIZE_NORMAL;
-            $ticket .= $this->centrarTexto('Comprobante No Válido como Factura');
-        }
-        
-        $ticket .= self::BOLD_OFF;
+        // Código de barras en línea secundaria (más pequeño)
+        $ticket .= '  Cod: ' . $item['codigo_barras'];
         $ticket .= self::LF;
-        $ticket .= self::LF;
-        
-        // 4. FECHA Y NÚMERO
-        $ticket .= self::ALIGN_LEFT;
-        $ticket .= 'Fecha: ' . date('d/m/Y H:i:s', strtotime($venta['fecha_hora']));
-        $ticket .= self::LF;
-        $ticket .= 'Venta N°: ' . str_pad($venta['id'], 8, '0', STR_PAD_LEFT);
-        $ticket .= self::LF;
-        $ticket .= self::LF;
-        
-        // Separador
-        $ticket .= $this->linea('-');
-        
-        // 5. ITEMS
-        $ticket .= self::BOLD_ON;
-        $ticket .= $this->formatearLinea('DESCRIPCIÓN', 'PRECIO', 32, 16);
-        $ticket .= self::BOLD_OFF;
-        $ticket .= $this->linea('-');
+    }
+    
+    $ticket .= $this->linea('-');
+    
+    // 6. TOTALES
+    $ticket .= self::LF;
+    
+    // Subtotal sin IVA (si existe)
+    if (isset($items[0]['precio_sin_iva']) && $items[0]['precio_sin_iva'] > 0) {
+        $subtotalSinIva = 0;
+        $totalIva = 0;
         
         foreach ($items as $item) {
-            // Nombre del departamento
-            $descripcion = substr($item['departamento'] ?? 'PRODUCTO', 0, 30);
-            $precio = '$' . number_format($item['precio'], 2, '.', ',');
-            
-            $ticket .= $this->formatearLinea($descripcion, $precio, 32, 16);
-            
-            // Código de barras en línea secundaria (más pequeño)
-            $ticket .= '  Cod: ' . $item['codigo_barras'];
-            $ticket .= self::LF;
+            $subtotalSinIva += floatval($item['precio_sin_iva'] ?? 0);
+            $totalIva += floatval($item['monto_iva'] ?? 0);
         }
         
+        $ticket .= $this->formatearLinea('Subtotal:', '$' . number_format($subtotalSinIva, 2, '.', ','), 32, 16);
+        $ticket .= $this->formatearLinea('IVA 21%:', '$' . number_format($totalIva, 2, '.', ','), 32, 16);
         $ticket .= $this->linea('-');
-        
-        // 6. TOTALES
+    }
+    
+    // TOTAL
+    $ticket .= self::SIZE_DOUBLE;
+    $ticket .= self::BOLD_ON;
+    $ticket .= $this->formatearLinea('TOTAL:', '$' . number_format($venta['total'], 2, '.', ','), 16, 8);
+    $ticket .= self::BOLD_OFF;
+    $ticket .= self::SIZE_NORMAL;
+    $ticket .= self::LF;
+    
+    // 7. FORMA DE PAGO
+    $ticket .= $this->linea('=');
+    $ticket .= self::BOLD_ON;
+    $ticket .= 'FORMA DE PAGO:';
+    $ticket .= self::BOLD_OFF;
+    $ticket .= self::LF;
+    
+    $tipoPagoTexto = $this->obtenerNombreTipoPago($venta['tipo_pago']);
+    $ticket .= $tipoPagoTexto;
+    $ticket .= self::LF;
+    
+    if ($venta['monto_recibido']) {
+        $ticket .= 'Recibido: $' . number_format($venta['monto_recibido'], 2, '.', ',');
         $ticket .= self::LF;
-        
-        // Subtotal sin IVA (si existe)
-        if (isset($items[0]['precio_sin_iva']) && $items[0]['precio_sin_iva'] > 0) {
-            $subtotalSinIva = 0;
-            $totalIva = 0;
-            
-            foreach ($items as $item) {
-                $subtotalSinIva += floatval($item['precio_sin_iva'] ?? 0);
-                $totalIva += floatval($item['monto_iva'] ?? 0);
-            }
-            
-            $ticket .= $this->formatearLinea('Subtotal:', '$' . number_format($subtotalSinIva, 2, '.', ','), 32, 16);
-            $ticket .= $this->formatearLinea('IVA 21%:', '$' . number_format($totalIva, 2, '.', ','), 32, 16);
-            $ticket .= $this->linea('-');
-        }
-        
-        // TOTAL
-        $ticket .= self::SIZE_DOUBLE;
+    }
+    
+    if ($venta['vuelto'] > 0) {
+        $ticket .= self::SIZE_DOUBLE_HEIGHT;
         $ticket .= self::BOLD_ON;
-        $ticket .= $this->formatearLinea('TOTAL:', '$' . number_format($venta['total'], 2, '.', ','), 16, 8);
+        $ticket .= 'VUELTO: $' . number_format($venta['vuelto'], 2, '.', ',');
         $ticket .= self::BOLD_OFF;
         $ticket .= self::SIZE_NORMAL;
         $ticket .= self::LF;
-        
-        // 7. FORMA DE PAGO
-        $ticket .= $this->linea('=');
-        $ticket .= self::BOLD_ON;
-        $ticket .= 'FORMA DE PAGO:';
-        $ticket .= self::BOLD_OFF;
-        $ticket .= self::LF;
-        
-        $tipoPagoTexto = $this->obtenerNombreTipoPago($venta['tipo_pago']);
-        $ticket .= $tipoPagoTexto;
-        $ticket .= self::LF;
-        
-        if ($venta['monto_recibido']) {
-            $ticket .= 'Recibido: $' . number_format($venta['monto_recibido'], 2, '.', ',');
-            $ticket .= self::LF;
-        }
-        
-        if ($venta['vuelto'] > 0) {
-            $ticket .= self::SIZE_DOUBLE_HEIGHT;
-            $ticket .= self::BOLD_ON;
-            $ticket .= 'VUELTO: $' . number_format($venta['vuelto'], 2, '.', ',');
-            $ticket .= self::BOLD_OFF;
-            $ticket .= self::SIZE_NORMAL;
-            $ticket .= self::LF;
-        }
-        
-        $ticket .= self::LF;
-        
-        // 8. PIE DE PÁGINA
-        $ticket .= $this->linea('=');
-        $ticket .= self::ALIGN_CENTER;
-        $ticket .= self::LF;
-        $ticket .= $this->centrarTexto('¡GRACIAS POR SU COMPRA!');
-        $ticket .= self::LF;
-        $ticket .= $this->centrarTexto('Vuelva Pronto');
-        $ticket .= self::LF;
-        $ticket .= self::LF;
-        
-        if ($requiereFiscal) {
-            $ticket .= $this->centrarTexto('DOCUMENTO VÁLIDO COMO FACTURA');
-            $ticket .= self::LF;
-        }
-        
-        $ticket .= self::LF;
-        $ticket .= self::LF;
-        $ticket .= self::LF;
-        
-        // 9. CORTAR PAPEL
-        $ticket .= self::CMD_CUT;
-        
-        return $ticket;
     }
+    
+    $ticket .= self::LF;
+    
+    // ========== 7.5. DATOS FISCALES AFIP (CAE) - SECCIÓN NUEVA ==========
+    if ($requiereFiscal) {
+        $ticket .= $this->linea('=');
+        
+        // Consultar CAE de la base de datos
+        try {
+            $database = new Database();
+            $db = $database->getConnection();
+            
+            $stmt = $db->prepare("
+                SELECT cae, fecha_vencimiento_cae, numero_comprobante, punto_venta, tipo_comprobante
+                FROM comprobantes_afip 
+                WHERE id_venta = ?
+                ORDER BY id DESC
+                LIMIT 1
+            ");
+            $stmt->execute([$venta['id']]);
+            $datosCAE = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($datosCAE && !empty($datosCAE['cae'])) {
+                // DATOS FISCALES ENCONTRADOS
+                $ticket .= self::BOLD_ON;
+                $ticket .= self::ALIGN_CENTER;
+                $ticket .= $this->centrarTexto('DATOS FISCALES AFIP');
+                $ticket .= self::BOLD_OFF;
+                $ticket .= self::ALIGN_LEFT;
+                $ticket .= self::LF;
+                
+                // Número de comprobante completo (Punto Venta - Número)
+                $numComprobante = str_pad($datosCAE['punto_venta'], 5, '0', STR_PAD_LEFT) . '-' . 
+                                 str_pad($datosCAE['numero_comprobante'], 8, '0', STR_PAD_LEFT);
+                
+                $ticket .= 'Comprobante: ' . $numComprobante;
+                $ticket .= self::LF;
+                
+                // Tipo de comprobante
+                $tipoComprobanteTexto = $this->obtenerTipoComprobanteTexto($datosCAE['tipo_comprobante']);
+                $ticket .= 'Tipo: ' . $tipoComprobanteTexto;
+                $ticket .= self::LF;
+                
+                // CAE en negrita y más destacado
+                $ticket .= self::LF;
+                $ticket .= self::BOLD_ON;
+                $ticket .= self::SIZE_DOUBLE_HEIGHT;
+                $ticket .= 'CAE: ' . $datosCAE['cae'];
+                $ticket .= self::SIZE_NORMAL;
+                $ticket .= self::BOLD_OFF;
+                $ticket .= self::LF;
+                $ticket .= self::LF;
+                
+                // Fecha de vencimiento del CAE
+                $fechaVencimiento = date('d/m/Y', strtotime($datosCAE['fecha_vencimiento_cae']));
+                $ticket .= 'Vencimiento CAE: ' . $fechaVencimiento;
+                $ticket .= self::LF;
+                
+                // Nota legal
+                $ticket .= self::LF;
+                $ticket .= self::ALIGN_CENTER;
+                $ticket .= self::SIZE_NORMAL;
+                $ticket .= $this->centrarTexto('Comprobante autorizado por AFIP');
+                $ticket .= self::ALIGN_LEFT;
+                $ticket .= self::LF;
+                
+            } else {
+                // NO SE ENCONTRÓ CAE - MOSTRAR ADVERTENCIA
+                $ticket .= self::ALIGN_CENTER;
+                $ticket .= self::BOLD_ON;
+                $ticket .= self::SIZE_DOUBLE_HEIGHT;
+                $ticket .= $this->centrarTexto('** SIN CAE **');
+                $ticket .= self::SIZE_NORMAL;
+                $ticket .= self::BOLD_OFF;
+                $ticket .= self::LF;
+                $ticket .= $this->centrarTexto('Pendiente registro AFIP');
+                $ticket .= self::ALIGN_LEFT;
+                $ticket .= self::LF;
+                
+                error_log("ADVERTENCIA: Ticket fiscal sin CAE - Venta ID: " . $venta['id']);
+            }
+            
+        } catch (Exception $e) {
+            // ERROR AL CONSULTAR CAE
+            error_log("Error consultando CAE para ticket: " . $e->getMessage());
+            
+            $ticket .= self::ALIGN_CENTER;
+            $ticket .= self::BOLD_ON;
+            $ticket .= $this->centrarTexto('** ERROR CAE **');
+            $ticket .= self::BOLD_OFF;
+            $ticket .= self::LF;
+            $ticket .= $this->centrarTexto('Consulte con administración');
+            $ticket .= self::ALIGN_LEFT;
+            $ticket .= self::LF;
+        }
+        
+        $ticket .= $this->linea('=');
+    }
+    // ========== FIN DATOS FISCALES AFIP ==========
+    
+    // 8. PIE DE PÁGINA
+    $ticket .= self::ALIGN_CENTER;
+    $ticket .= self::LF;
+    $ticket .= $this->centrarTexto('¡GRACIAS POR SU COMPRA!');
+    $ticket .= self::LF;
+    $ticket .= $this->centrarTexto('Vuelva Pronto');
+    $ticket .= self::LF;
+    $ticket .= self::LF;
+    
+    if ($requiereFiscal) {
+        $ticket .= $this->centrarTexto('DOCUMENTO VÁLIDO COMO FACTURA');
+        $ticket .= self::LF;
+    }
+    
+    $ticket .= self::LF;
+    $ticket .= self::LF;
+    $ticket .= self::LF;
+    
+    // 9. CORTAR PAPEL
+    $ticket .= self::CMD_CUT;
+    
+    return $ticket;
+}
+
+/**
+ * FUNCIÓN AUXILIAR NUEVA: Obtener texto del tipo de comprobante
+ */
+private function obtenerTipoComprobanteTexto($tipo) {
+    $tipos = [
+        1 => 'Factura A',
+        2 => 'Nota de Débito A',
+        3 => 'Nota de Crédito A',
+        4 => 'Recibo A',
+        5 => 'Nota de Venta al Contado A',
+        6 => 'Factura B',
+        7 => 'Nota de Débito B',
+        8 => 'Nota de Crédito B',
+        9 => 'Recibo B',
+        10 => 'Nota de Venta al Contado B',
+        11 => 'Factura C',
+        12 => 'Nota de Débito C',
+        13 => 'Nota de Crédito C',
+        15 => 'Recibo C',
+        51 => 'Factura M',
+        81 => 'Tique Factura A',
+        82 => 'Tique Factura B',
+        83 => 'Tique',
+        111 => 'Tique Factura C',
+        112 => 'Tique Nota de Crédito',
+        113 => 'Tique Nota de Débito',
+        114 => 'Tique Factura M',
+        115 => 'Tique Nota de Crédito M',
+        116 => 'Tique Nota de Débito M'
+    ];
+    
+    return $tipos[$tipo] ?? "Tipo $tipo";
+}
     
     /**
      * Envía el ticket a la impresora

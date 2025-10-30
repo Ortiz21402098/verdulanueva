@@ -1,137 +1,222 @@
 <?php
 
+
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once 'config.php';
-require_once 'impresoraFiscal3nStar.php';
 
-echo "<h1>Configuración AFIP - Mini Supermercado La Nueva</h1>";
-echo "<hr>";
+echo "<!DOCTYPE html><html><head><meta charset='utf-8'>
+<title>Setup Rápido AFIP</title>
+<style>
+body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+.container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; }
+h1 { color: #007bff; }
+.step { background: #f8f9fa; padding: 15px; margin: 15px 0; border-left: 4px solid #007bff; }
+.success { background: #d4edda; color: #155724; padding: 15px; margin: 10px 0; border-radius: 5px; }
+.error { background: #f8d7da; color: #721c24; padding: 15px; margin: 10px 0; border-radius: 5px; }
+.btn { display: inline-block; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 10px 5px 10px 0; }
+code { background: #f8f9fa; padding: 2px 6px; border-radius: 3px; }
+</style>
+</head><body><div class='container'>";
 
-// Verificar certificados
-$cert_key = 'certificados/afip.key';
-$cert_crt = 'certificados/afip.crt';
+echo "<h1>⚡ Setup Rápido AFIP</h1>";
 
-echo "<h2>1. Verificando Certificados</h2>";
+$config = ConfigManager::getInstance();
 
-if (file_exists($cert_key)) {
-    echo "✓ Clave privada encontrada: {$cert_key}<br>";
+// PASO 1: Verificar directorio de certificados
+echo "<div class='step'>";
+echo "<h3>Paso 1: Verificar directorio de certificados</h3>";
+
+if (!is_dir('certificados')) {
+    mkdir('certificados', 0755, true);
+    echo "✓ Directorio 'certificados' creado<br>";
 } else {
-    echo "<span style='color:red'>✗ Clave privada NO encontrada: {$cert_key}</span><br>";
-    echo "<p><strong>Acción requerida:</strong> Ejecutar comando: <code>openssl genrsa -out certificados/moreno_VERDU.key 2048</code></p>";
+    echo "✓ Directorio 'certificados' existe<br>";
 }
 
-if (file_exists($cert_crt)) {
-    echo "✓ Certificado encontrado: {$cert_crt}<br>";
+if (!is_dir('cache')) {
+    mkdir('cache', 0755, true);
+    echo "✓ Directorio 'cache' creado<br>";
 } else {
-    echo "<span style='color:orange'>⚠ Certificado NO encontrado: {$cert_crt}</span><br>";
-    echo "<p><strong>Acción requerida:</strong></p>";
+    echo "✓ Directorio 'cache' existe<br>";
+}
+echo "</div>";
+
+// PASO 2: Verificar certificados existentes
+echo "<div class='step'>";
+echo "<h3>Paso 2: Verificar certificados</h3>";
+
+$certPath = 'certificados/moreno_homologacion.crt';
+$keyPath = 'certificados/moreno_homologacion.key';
+
+$certExiste = file_exists($certPath);
+$keyExiste = file_exists($keyPath);
+
+if ($certExiste && $keyExiste) {
+    echo "<div class='success'>";
+    echo "✓ Certificado encontrado: <code>{$certPath}</code><br>";
+    echo "✓ Clave privada encontrada: <code>{$keyPath}</code><br>";
+    
+    // Verificar validez
+    $cert = openssl_x509_parse(file_get_contents($certPath));
+    if ($cert) {
+        $diasRestantes = floor(($cert['validTo_time_t'] - time()) / 86400);
+        echo "✓ Certificado válido hasta: " . date('Y-m-d', $cert['validTo_time_t']) . " ({$diasRestantes} días)<br>";
+    }
+    echo "</div>";
+} else {
+    echo "<div class='error'>";
+    echo "<h4>⚠️ Certificados no encontrados</h4>";
+    echo "<p>Necesitás los siguientes archivos en el directorio 'certificados/':</p>";
+    echo "<ul>";
+    echo "<li><strong>afip.crt</strong> - Certificado descargado de AFIP</li>";
+    echo "<li><strong>afip.key</strong> - Clave privada generada</li>";
+    echo "</ul>";
+    echo "<p><strong>Pasos para obtenerlos:</strong></p>";
     echo "<ol>";
-    echo "<li>Subir <code>moreno_VERDU.csr</code> a AFIP (Administrador de Relaciones → Certificados)</li>";
-    echo "<li>Descargar el archivo .crt que te da AFIP</li>";
-    echo "<li>Guardarlo como <code>certificados/moreno_VERDU.crt</code></li>";
+    echo "<li>Ingresar a <a href='https://auth.afip.gob.ar' target='_blank'>AFIP con Clave Fiscal</a></li>";
+    echo "<li>Ir a: Administrador de Relaciones → Certificados Digitales</li>";
+    echo "<li>Subir el archivo CSR (si lo tenés) o generar uno nuevo</li>";
+    echo "<li>Descargar el certificado (.crt) y guardarlo como <code>certificados/afip.crt</code></li>";
+    echo "<li>Copiar la clave privada (.key) como <code>certificados/afip.key</code></li>";
     echo "</ol>";
+    echo "</div>";
+    echo "</div>";
+    echo "</div></body></html>";
+    exit;
 }
+echo "</div>";
 
-echo "<hr>";
-
-// Crear tabla de configuración si no existe
-echo "<h2>2. Configurando Base de Datos</h2>";
+// PASO 3: Actualizar base de datos
+echo "<div class='step'>";
+echo "<h3>Paso 3: Configurar base de datos</h3>";
 
 try {
     $database = new Database();
     $db = $database->getConnection();
     
-    // Crear tabla configuracion si no existe
-    $db->exec("
-        CREATE TABLE IF NOT EXISTS configuracion (
-            clave VARCHAR(100) PRIMARY KEY,
-            valor TEXT,
-            tipo VARCHAR(20) DEFAULT 'string',
-            descripcion TEXT,
-            fecha_modificacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-        )
-    ");
-    
-    echo "✓ Tabla 'configuracion' verificada<br>";
-    
-    // Insertar configuraciones AFIP
-    $config = ConfigManager::getInstance();
-    
-    $configuraciones = [
-        // AFIP
-        ['afip_habilitado', 'false', 'boolean', 'Habilitar integración con AFIP'],
-        ['afip_cuit', '20355274684', 'string', 'CUIT del negocio'],
-        ['afip_certificado', 'certificados/moreno_VERDU.crt', 'string', 'Ruta al certificado AFIP'],
-        ['afip_clave_privada', 'certificados/moreno_VERDU.key', 'string', 'Ruta a la clave privada'],
-        ['afip_punto_venta', '1', 'int', 'Punto de venta AFIP'],
-        ['afip_ambiente', '2', 'int', 'Ambiente AFIP (1=Producción, 2=Testing)'],
-        ['afip_tipo_comprobante', '11', 'int', 'Tipo de comprobante default (11=Factura C)'],
-        
-        // Impresora
-        ['impresora_fiscal_habilitada', 'true', 'boolean', 'Habilitar impresión automática'],
-        ['impresora_nombre', 'POS-58', 'string', 'Nombre de la impresora'],
-        ['impresora_fiscal_puerto', 'USB001', 'string', 'Puerto de la impresora'],
-        
-        // Negocio
-        ['nombre_negocio', 'Mini Supermercado La Nueva', 'string', 'Nombre del negocio'],
-        ['direccion_negocio', 'Av. Amadeo Sabattini 2607', 'string', 'Dirección'],
-        ['cuit_negocio', '20-35527468-4', 'string', 'CUIT formateado']
+    // Actualizar configuraciones
+    $configs = [
+        ['afip_habilitado', '0', 'boolean'],
+        ['afip_cuit', '20355274684', 'string'],
+        ['afip_certificado', $certPath, 'string'],
+        ['afip_clave_privada', $keyPath, 'string'],
+        ['afip_punto_venta', '1', 'int'],
+        ['afip_ambiente', '2', 'int'],
+        ['afip_tipo_comprobante', '11', 'int']
     ];
     
-    foreach ($configuraciones as $cfg) {
+    foreach ($configs as $cfg) {
         $stmt = $db->prepare("
-            INSERT INTO configuracion (clave, valor, tipo, descripcion) 
-            VALUES (?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE 
-                valor = IF(valor IS NULL OR valor = '', VALUES(valor), valor),
-                tipo = VALUES(tipo),
-                descripcion = VALUES(descripcion)
+            INSERT INTO configuracion (clave, valor, tipo) 
+            VALUES (?, ?, ?)
+            ON DUPLICATE KEY UPDATE valor = VALUES(valor), tipo = VALUES(tipo)
         ");
         $stmt->execute($cfg);
     }
     
-    echo "✓ Configuraciones insertadas/actualizadas<br>";
+    echo "✓ Configuración actualizada en la base de datos<br>";
     
 } catch (Exception $e) {
-    echo "<span style='color:red'>✗ Error: " . $e->getMessage() . "</span><br>";
+    echo "<div class='error'>Error: " . $e->getMessage() . "</div>";
 }
+echo "</div>";
 
-echo "<hr>";
+// PASO 4: Test de firma
+echo "<div class='step'>";
+echo "<h3>Paso 4: Test de firma digital</h3>";
 
-// Test de conectividad AFIP
-echo "<h2>3. Test de Conectividad AFIP</h2>";
+try {
+    $tra = '<?xml version="1.0" encoding="UTF-8"?>
+<loginTicketRequest version="1.0">
+    <header>
+        <uniqueId>' . time() . '</uniqueId>
+        <generationTime>' . date('c') . '</generationTime>
+        <expirationTime>' . date('c', strtotime('+1 hour')) . '</expirationTime>
+    </header>
+    <service>wsfe</service>
+</loginTicketRequest>';
+    
+    $traFile = tempnam(sys_get_temp_dir(), 'tra_');
+    $cmsFile = tempnam(sys_get_temp_dir(), 'cms_');
+    
+    file_put_contents($traFile, $tra);
+    
+    $resultado = openssl_pkcs7_sign(
+        $traFile,
+        $cmsFile,
+        file_get_contents($certPath),
+        file_get_contents($keyPath),
+        [],
+        PKCS7_BINARY | PKCS7_NOATTR
+    );
+    
+    if ($resultado && file_exists($cmsFile) && filesize($cmsFile) > 0) {
+        echo "<div class='success'>✓ Test de firma exitoso (" . filesize($cmsFile) . " bytes)</div>";
+        $firmaOK = true;
+    } else {
+        echo "<div class='error'>✗ Error en la firma: " . openssl_error_string() . "</div>";
+        $firmaOK = false;
+    }
+    
+    @unlink($traFile);
+    @unlink($cmsFile);
+    
+} catch (Exception $e) {
+    echo "<div class='error'>✗ Excepción: " . $e->getMessage() . "</div>";
+    $firmaOK = false;
+}
+echo "</div>";
 
-if (file_exists($cert_key) && file_exists($cert_crt)) {
+// PASO 5: Test de conectividad AFIP
+if ($firmaOK) {
+    echo "<div class='step'>";
+    echo "<h3>Paso 5: Test de conectividad AFIP</h3>";
+    
     try {
         require_once 'AFIPFacturacion.php';
         
         $afipConfig = [
             'cuit' => '20355274684',
-            'certificado' => $cert_crt,
-            'clave_privada' => $cert_key,
+            'certificado' => $certPath,
+            'clave_privada' => $keyPath,
             'punto_venta' => 1,
-            'ambiente' => 2 // Testing
+            'ambiente' => 2
         ];
         
-        echo "<p>Intentando conectar con AFIP (ambiente Testing)...</p>";
+        echo "<p>⏳ Conectando con AFIP (ambiente Testing)...</p>";
         
         $afip = new AFIPFacturacion($afipConfig);
         $resultado = $afip->testConectividad();
         
         if ($resultado['success']) {
-            echo "<div style='background:#d4edda; padding:15px; border-radius:5px; color:#155724;'>";
-            echo "<strong>✓ CONEXIÓN EXITOSA</strong><br>";
-            echo "Ambiente: {$resultado['ambiente']}<br>";
-            echo "Token expira: {$resultado['token_expira']}<br>";
+            echo "<div class='success'>";
+            echo "<h3>✓ ¡CONEXIÓN EXITOSA!</h3>";
+            echo "<p>Ambiente: <strong>{$resultado['ambiente']}</strong></p>";
+            echo "<p>Token expira: <strong>{$resultado['token_expira']}</strong></p>";
             echo "</div>";
             
-            // Habilitar AFIP en configuración
+            // Habilitar AFIP
             $config->set('afip_habilitado', 'true', 'boolean');
-            echo "<p>✓ AFIP habilitado automáticamente</p>";
+            
+            echo "<div class='success'>";
+            echo "<h2>🎉 ¡CONFIGURACIÓN COMPLETA!</h2>";
+            echo "<p>Tu sistema está listo para facturar electrónicamente con AFIP.</p>";
+            echo "<p><strong>Importante:</strong></p>";
+            echo "<ul>";
+            echo "<li>Estás en ambiente de <strong>TESTING</strong></li>";
+            echo "<li>Los comprobantes NO tienen validez fiscal</li>";
+            echo "<li>Probá varias ventas antes de pasar a producción</li>";
+            echo "</ul>";
+            echo "<a href='Nuevaventa.php' class='btn'>🛒 Ir al Sistema de Ventas</a>";
+            echo "<a href='diagnostico_afip.php' class='btn' style='background:#6c757d'>🔍 Ver Diagnóstico Completo</a>";
+            echo "</div>";
             
         } else {
-            echo "<div style='background:#f8d7da; padding:15px; border-radius:5px; color:#721c24;'>";
-            echo "<strong>✗ ERROR DE CONEXIÓN</strong><br>";
-            echo "Mensaje: {$resultado['message']}<br>";
+            echo "<div class='error'>";
+            echo "<h3>✗ Error de conexión</h3>";
+            echo "<p>{$resultado['message']}</p>";
             if (isset($resultado['errores'])) {
                 echo "<ul>";
                 foreach ($resultado['errores'] as $error) {
@@ -139,125 +224,25 @@ if (file_exists($cert_key) && file_exists($cert_crt)) {
                 }
                 echo "</ul>";
             }
+            echo "<p><a href='diagnostico_afip.php' class='btn'>Ver Diagnóstico Detallado</a></p>";
             echo "</div>";
         }
         
     } catch (Exception $e) {
-        echo "<div style='background:#f8d7da; padding:15px; border-radius:5px; color:#721c24;'>";
-        echo "<strong>✗ EXCEPCIÓN</strong><br>";
-        echo $e->getMessage();
+        echo "<div class='error'>";
+        echo "<h3>✗ Excepción</h3>";
+        echo "<p>" . $e->getMessage() . "</p>";
+        echo "<pre>" . $e->getTraceAsString() . "</pre>";
         echo "</div>";
     }
-} else {
-    echo "<p style='color:orange'>⚠ No se puede probar conectividad sin los certificados</p>";
-}
-
-echo "<hr>";
-
-// Test de impresora
-echo "<h2>4. Test de Impresora</h2>";
-
-try {
-    require_once 'ImpresoraFiscal3nStar.php';
     
-    $impresora = new ImpresoraTermica();
-    
-    echo "<p>Impresora configurada: {$config->get('impresora_nombre')}</p>";
-    echo "<p>Puerto: {$config->get('impresora_fiscal_puerto')}</p>";
-    
-    echo "<form method='post'>";
-    echo "<button type='submit' name='test_impresora' style='padding:10px 20px; background:#007bff; color:white; border:none; border-radius:5px; cursor:pointer;'>";
-    echo "🖨️ Imprimir Ticket de Prueba";
-    echo "</button>";
-    echo "</form>";
-    
-    if (isset($_POST['test_impresora'])) {
-        $resultado = $impresora->imprimirPrueba();
-        
-        if ($resultado['success']) {
-            echo "<div style='background:#d4edda; padding:15px; margin-top:10px; border-radius:5px; color:#155724;'>";
-            echo "<strong>✓ IMPRESIÓN EXITOSA</strong><br>";
-            echo $resultado['message'];
-            echo "</div>";
-        } else {
-            echo "<div style='background:#f8d7da; padding:15px; margin-top:10px; border-radius:5px; color:#721c24;'>";
-            echo "<strong>✗ ERROR DE IMPRESIÓN</strong><br>";
-            echo $resultado['message'];
-            echo "</div>";
-        }
-    }
-    
-} catch (Exception $e) {
-    echo "<p style='color:red'>Error: " . $e->getMessage() . "</p>";
-}
-
-echo "<hr>";
-
-// Resumen final
-echo "<h2>5. Resumen de Configuración</h2>";
-
-echo "<table border='1' cellpadding='10' style='width:100%; border-collapse:collapse;'>";
-echo "<tr style='background:#f8f9fa;'><th>Configuración</th><th>Valor</th><th>Estado</th></tr>";
-
-$items_verificar = [
-    ['AFIP Habilitado', $config->get('afip_habilitado') ? 'SI' : 'NO', $config->get('afip_habilitado')],
-    ['AFIP Ambiente', $config->get('afip_ambiente') == 2 ? 'Testing' : 'Producción', true],
-    ['CUIT', $config->get('afip_cuit'), !empty($config->get('afip_cuit'))],
-    ['Certificado Existe', $cert_crt, file_exists($cert_crt)],
-    ['Clave Privada Existe', $cert_key, file_exists($cert_key)],
-    ['Impresora Habilitada', $config->get('impresora_fiscal_habilitada') ? 'SI' : 'NO', $config->get('impresora_fiscal_habilitada')],
-    ['Nombre Impresora', $config->get('impresora_nombre'), !empty($config->get('impresora_nombre'))]
-];
-
-foreach ($items_verificar as $item) {
-    $color = $item[2] ? '#d4edda' : '#f8d7da';
-    $icono = $item[2] ? '✓' : '✗';
-    
-    echo "<tr>";
-    echo "<td><strong>{$item[0]}</strong></td>";
-    echo "<td>{$item[1]}</td>";
-    echo "<td style='background:{$color}; text-align:center;'>{$icono}</td>";
-    echo "</tr>";
-}
-
-echo "</table>";
-
-echo "<hr>";
-
-echo "<h2>Próximos Pasos</h2>";
-
-if (!file_exists($cert_crt)) {
-    echo "<div style='background:#fff3cd; padding:15px; border-radius:5px; color:#856404;'>";
-    echo "<strong>⚠️ ACCIÓN REQUERIDA</strong><br><br>";
-    echo "<ol>";
-    echo "<li>Ir a <a href='https://auth.afip.gob.ar' target='_blank'>AFIP con Clave Fiscal</a></li>";
-    echo "<li>Administrador de Relaciones → Certificados Digitales</li>";
-    echo "<li>Subir el archivo <code>certificados/moreno_VERDU.csr</code></li>";
-    echo "<li>Descargar el certificado y guardarlo como <code>certificados/moreno_VERDU.crt</code></li>";
-    echo "<li>Volver a ejecutar este script</li>";
-    echo "</ol>";
-    echo "</div>";
-} elseif (!$config->get('afip_habilitado')) {
-    echo "<div style='background:#fff3cd; padding:15px; border-radius:5px; color:#856404;'>";
-    echo "<strong>⚠️ CONFIGURACIÓN INCOMPLETA</strong><br><br>";
-    echo "<p>Los certificados existen pero la conexión con AFIP falló.</p>";
-    echo "<p>Revisa los errores arriba y contacta al contador si persisten.</p>";
     echo "</div>";
 } else {
-    echo "<div style='background:#d4edda; padding:20px; border-radius:5px; color:#155724;'>";
-    echo "<strong>✓ SISTEMA LISTO PARA USAR</strong><br><br>";
-    echo "<p>La integración con AFIP está configurada y funcionando.</p>";
-    echo "<p><strong>Recuerda:</strong></p>";
-    echo "<ul>";
-    echo "<li>Estás en ambiente de <strong>TESTING</strong></li>";
-    echo "<li>Los comprobantes generados NO son válidos fiscalmente</li>";
-    echo "<li>Probá varias ventas antes de pasar a PRODUCCIÓN</li>";
-    echo "<li>Para activar PRODUCCIÓN, cambia 'afip_ambiente' a 1 en la configuración</li>";
-    echo "</ul>";
-    echo "<p><a href='Nuevaventa.php' style='background:#28a745; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;'>Ir al Sistema de Ventas</a></p>";
+    echo "<div class='error'>";
+    echo "<h3>⚠️ No se puede continuar</h3>";
+    echo "<p>El test de firma falló. Verificá que los certificados sean correctos.</p>";
     echo "</div>";
 }
 
-echo "<hr>";
-echo "<p style='text-align:center; color:#666; font-size:12px;'>Setup AFIP v1.0 - Mini Supermercado La Nueva</p>";
+echo "</div></body></html>";
 ?>
